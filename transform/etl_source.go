@@ -101,14 +101,22 @@ func (s *ETLSource) PropogateAlias() {
 	}
 }
 
+// func (s *ETLSource) GenerateSQL() (string, error) {
+// 	s.CreateAlias()
+// 	s.CreateAliases()
+// 	s.PropogateAlias()
+// 	tmpl := `select {{ .GenerateSQLSelect }}
+// from (
+//   {{ .Source.GenerateSQL }}
+// ) as "{{ .Alias }}"{{ range .Operations }}{{ .GenerateSQL }}{{end}}`
+// 	return s.TemplateString(tmpl)
+// }
+
 func (s *ETLSource) GenerateSQL() (string, error) {
 	s.CreateAlias()
 	s.CreateAliases()
 	s.PropogateAlias()
-	tmpl := `select {{ .GenerateSQLSelect }}
-from (
-  {{ .Source.GenerateSQL }}
-) as "{{ .Alias }}"{{ range .Operations }}{{ .GenerateSQL }}{{end}}`
+	tmpl := `{{ .Source.GenerateSQL }}{{ range .Operations }}{{ .GenerateSQL }}{{end}}`
 	return s.TemplateString(tmpl)
 }
 

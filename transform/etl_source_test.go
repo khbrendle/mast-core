@@ -219,7 +219,7 @@ func TestETLSourceGenerateSQL1(t *testing.T) {
 	    {
 	      "type": "Field",
 	      "field": {
-	        "table": "customer",
+	        "table": "staff",
 	        "column": "last_name"
 	      }
 	    },
@@ -323,7 +323,8 @@ func TestETLSourceGenerateSQL1(t *testing.T) {
 	        "method": "union"
 	      },
 	    "source": {
-	      "select": [{
+	      "select": [
+	        {
 	        "type": "Value",
 	        "field": {
 	          "table": "",
@@ -356,54 +357,53 @@ func TestETLSourceGenerateSQL1(t *testing.T) {
 	      "location": {
 	        "database": "pagila",
 	        "schema": "public",
-	        "table": "address"
+	        "table": "staff"
 	      }
-	    },
-	    "operations": [{
-	      "type": {
-	        "method": "join",
-	        "join_on": [{
-	          "entity": {
-	            "left": {
-	              "type": "Field",
-	              "is_arg": false,
-	              "arg_index": null,
-	              "field": {
-	                "table": "staff",
-	                "column": "address_id"
-	              },
-	              "value": "",
-	              "function": "",
-	              "args": []
+	    }
+	  },{
+	    "type": {
+	      "method": "join",
+	      "join_on": [{
+	        "entity": {
+	          "left": {
+	            "type": "Field",
+	            "is_arg": false,
+	            "arg_index": null,
+	            "field": {
+	              "table": "staff",
+	              "column": "address_id"
 	            },
-	            "right": {
-	              "type": "Field",
-	              "is_arg": false,
-	              "arg_index": null,
-	              "field": {
-	                "table": "address",
-	                "column": "address_id"
-	              },
-	              "value": "",
-	              "function": "",
-	              "args": []
-	            },
-	            "equality": "="
+	            "value": "",
+	            "function": "",
+	            "args": []
 	          },
-	          "operator": ""
-	        }]
-	      },
-	      "source": {
-	        "select": [],
-	        "location": {
-	          "database": "pagila",
-	          "schema": "public",
-	          "table": "address"
+	          "right": {
+	            "type": "Field",
+	            "is_arg": false,
+	            "arg_index": null,
+	            "field": {
+	              "table": "address",
+	              "column": "address_id"
+	            },
+	            "value": "",
+	            "function": "",
+	            "args": []
+	          },
+	          "equality": "="
 	        },
-	        "filter": "",
-	        "operation": []
-	      }
-	    }]
+	        "operator": ""
+	      }]
+	    },
+	    "source": {
+	      "select": [],
+	      "location": {
+	        "database": "pagila",
+	        "schema": "public",
+	        "table": "address"
+	      },
+	      "filter": "",
+	      "operation": []
+	    }
 	  }]
 	}`)
 
@@ -413,6 +413,12 @@ func TestETLSourceGenerateSQL1(t *testing.T) {
 	if err = json.Unmarshal(x, &y); err != nil {
 		t.Error(err)
 	}
+
+	// var b []byte
+	// if b, err = json.Marshal(y); err != nil {
+	// 	t.Error(err)
+	// }
+	// fmt.Println(string(b))
 
 	var got, expected string
 	if got, err = y.GenerateSQL(); err != nil {

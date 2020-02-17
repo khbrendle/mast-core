@@ -62,7 +62,7 @@ func (ft FieldTransform) GenerateSQL() (string, error) {
 	default:
 		return "", fmt.Errorf("unexpected FieldTransformation type '%s'", ft.Type)
 	}
-	tmpl := fmt.Sprintf(`%s{{ if ne .Alias "" }} as {{ .Alias }}{{end}}`, s)
+	tmpl := fmt.Sprintf(`%s{{ if ne .Alias "" }} as "{{ .Alias }}"{{end}}`, s)
 	return ft.TemplateString(tmpl)
 }
 

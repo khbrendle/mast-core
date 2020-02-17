@@ -6,9 +6,10 @@ import (
 )
 
 type Field struct {
-	Database string `json:"database"`
-	Table    string `json:"table"`
-	Column   string `json:"column"`
+	Database   string `json:"database"`
+	Table      string `json:"table"`
+	Column     string `json:"column"`
+	TableAlias string `json:"-"`
 }
 
 // TemplateBytes executes an input template against Field object returning byte array
@@ -36,6 +37,11 @@ func (f Field) TemplateString(tmpl string) (string, error) {
 }
 
 func (f Field) GenerateSQL() (string, error) {
-	tmpl := `"{{ .Table }}"."{{ .Column }}"`
+	var tmpl string
+	if f.TableAlias == "" {
+		tmpl = `"{{ .Table }}"."{{ .Column }}"`
+	} else {
+		tmpl = `"{{ .TableAlias }}"."{{ .Column }}"`
+	}
 	return f.TemplateString(tmpl)
 }

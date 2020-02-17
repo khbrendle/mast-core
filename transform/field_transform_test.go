@@ -154,7 +154,7 @@ func TestGenerateSQLValueAlias0(t *testing.T) {
 	if got, err = y.GenerateSQL(); err != nil {
 		t.Error(err)
 	}
-	expected = `'static text' as text_col`
+	expected = `'static text' as "text_col"`
 
 	if got != expected {
 		t.Errorf("\ngot     : %s\nexpected: %s", got, expected)

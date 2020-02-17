@@ -37,16 +37,16 @@ func TestDataSourceOperationGenerateSQL0(t *testing.T) {
         "table": "actor"
       },
       "filter": "",
-      "operation": []
+      "operations": []
     }
   }
 `)
-	if err := json.Unmarshal(x, &y); err != nil {
+	var err error
+	if err = json.Unmarshal(x, &y); err != nil {
 		t.Error(err)
 	}
-
+	// fmt.Printf("%+v\n", y)
 	var got, expected string
-	var err error
 
 	// test full
 	if got, err = y.GenerateSQL(); err != nil {
@@ -54,8 +54,8 @@ func TestDataSourceOperationGenerateSQL0(t *testing.T) {
 	}
 	expected = `
 union
-select "actor"."actor_id", "actor"."first_name", "actor"."last_name"
-from "public"."actor"`
+select "a_actor"."actor_id", "a_actor"."first_name", "a_actor"."last_name"
+from "public"."actor" as "a_actor"`
 
 	if got != expected {
 		t.Errorf("\ngot     :\n%s\nexpected:\n%s", got, expected)
@@ -63,7 +63,7 @@ from "public"."actor"`
 }
 
 func TestDataSourceOperationGenerateSQL1(t *testing.T) {
-	var y DataSource
+	var y DataSourceOperation
 	x := []byte(`{
 			"type": {
 		    "method": "join",
@@ -141,7 +141,7 @@ func TestDataSourceOperationGenerateSQL1(t *testing.T) {
 	if err = json.Unmarshal(x, &y); err != nil {
 		t.Error(err)
 	}
-
+	// fmt.Printf("%+v\n", y)
 	var got, expected string
 
 	// test full
@@ -149,7 +149,7 @@ func TestDataSourceOperationGenerateSQL1(t *testing.T) {
 		t.Error(err)
 	}
 	expected = `
-left join "public"."actor"
+left join "public"."actor" as ""
 	on "person"."name" = "employee"."name" and "person"."name" = "employee"."name"`
 	if got != expected {
 		t.Errorf("\ngot     :\n%s\nexpected:\n%s", got, expected)

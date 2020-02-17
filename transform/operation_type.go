@@ -46,6 +46,12 @@ func (s OperationType) GenerateSQLJoin() (string, error) {
 }
 
 func (s OperationType) GenerateSQLModifier() (string, error) {
-	tmpl := `{{.Modifier}}{{if ne .Modifier ""}} {{end}}`
+	var tmpl string
+	switch s.Method {
+	case "union":
+		tmpl = `{{if ne .Modifier ""}} {{end}}{{.Modifier}}`
+	case "join":
+		tmpl = `{{.Modifier}}{{if ne .Modifier ""}} {{end}}`
+	}
 	return s.TemplateString(tmpl)
 }

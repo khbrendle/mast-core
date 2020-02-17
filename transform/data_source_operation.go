@@ -39,7 +39,13 @@ func (s DataSourceOperation) TemplateString(tmpl string) (string, error) {
 	return string(b), nil
 }
 
+// func (s *DataSourceOperation) CreateAlias() {
+// 	s.Source.Location.CreateAlias()
+// }
+
 func (s *DataSourceOperation) GenerateSQL() (string, error) {
+	// s.CreateAlias()
+	// s.Source.PropogateAlias()
 	switch s.Type.Method {
 	case "union":
 		return s.GenerateSQLUnion()
@@ -52,7 +58,7 @@ func (s *DataSourceOperation) GenerateSQL() (string, error) {
 
 func (s *DataSourceOperation) GenerateSQLUnion() (string, error) {
 	tmpl := `
-union {{ .Type.Modifier }}
+union{{ .Type.Modifier }}
 {{ .Source.GenerateSQL }}`
 
 	return s.TemplateString(tmpl)

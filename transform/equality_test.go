@@ -50,7 +50,7 @@ func TestEqualityGeneratePySpark0(t *testing.T) {
 	if got, err = y.GeneratePySpark(); err != nil {
 		t.Error(err)
 	}
-	expected = `> F.lit(1)`
+	expected = `> 1`
 
 	if got != expected {
 		t.Errorf("\ngot     : %s\nexpected: %s", got, expected)

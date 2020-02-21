@@ -31,7 +31,7 @@ from "public"."actor" as "a_actor"`
 
 func TestDataSourceOperationGenerateSQL1(t *testing.T) {
 	var y DataSourceOperation
-	x := []byte(`{"type":{"method":"join","modifier":"left","join_on":[{"entity":{"left":{"type":"Field","is_arg":false,"arg_index":null,"field":{"table":"person","column":"name"},"value":"","function":"","args":[]},"right":{"type":"Field","is_arg":false,"arg_index":null,"field":{"table":"employee","column":"name"},"value":"","function":"","args":[]},"equality":"="},"operator":""},{"entity":{"left":{"type":"Field","is_arg":false,"arg_index":null,"field":{"table":"person","column":"name"},"value":"","function":"","args":[]},"right":{"type":"Field","is_arg":false,"arg_index":null,"field":{"table":"employee","column":"name"},"value":"","function":"","args":[]},"equality":"="},"operator":"and"}]},"source":{"select":[],"location":{"database":"pagila","schema":"public","table":"actor"}}}`)
+	x := []byte(`{"type":{"method":"join","modifier":"left","join_on":[{"entity":{"type":"Field","is_arg":false,"field":{"table":"person","column":"name"},"equality":{"operator":"=","arg":{"type":"Field","is_arg":false,"field":{"table":"employee","column":"name"}}}}},{"entity":{"type":"Field","is_arg":false,"arg_index":null,"field":{"table":"person","column":"name"},"equality":{"operator":"=","arg":{"type":"Field","is_arg":false,"field":{"table":"employee","column":"name"}}}},"operator":"and"}]},"source":{"select":[],"location":{"database":"pagila","schema":"public","table":"actor"}}}`)
 	var err error
 	if err = json.Unmarshal(x, &y); err != nil {
 		t.Error(err)

@@ -8,6 +8,7 @@ import (
 )
 
 type FieldTransform struct {
+	// 'Field', 'Function', or 'Value'
 	Type         string            `json:"type"`
 	IsArg        bool              `json:"is_arg"`
 	ArgIndex     int               `json:"arg_index"`
@@ -154,13 +155,13 @@ func (ft FieldTransform) GeneratePySparkValue() (string, error) {
 			if err = json.Unmarshal(ft.Value, &vString); err != nil {
 				return "", err
 			} else {
-				return fmt.Sprintf(`F.lit('%s')`, vString), nil
+				return fmt.Sprintf(`"%s"`, vString), nil
 			}
 		} else {
-			return fmt.Sprintf("F.lit(%f)", vFloat), nil
+			return fmt.Sprintf("%f", vFloat), nil
 		}
 	} else {
-		return fmt.Sprintf("F.lit(%d)", vInt), nil
+		return fmt.Sprintf("%d", vInt), nil
 	}
 }
 

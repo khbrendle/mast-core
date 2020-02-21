@@ -5,115 +5,8 @@ import (
 	"testing"
 )
 
-var testDataJoinItem = make(map[string]JoinItem)
-var tmpDataJoinItem JoinItem
-
-func init() {
-	var x []byte
-	// single field compare
-	x = []byte(`{
-    "entity": {
-      "left": {
-        "type": "Field",
-        "is_arg": false,
-        "arg_index": null,
-        "field": {
-          "table": "person",
-          "column": "name"
-        },
-        "value": "",
-        "function": "",
-        "args": []
-      },
-      "right": {
-        "type": "Field",
-        "is_arg": false,
-        "arg_index": null,
-        "field": {
-          "table": "employee",
-          "column": "name"
-        },
-        "value": "",
-        "function": "",
-        "args": []
-      },
-      "equality": "="
-    },
-    "operator": ""
-  }`)
-	if err := json.Unmarshal(x, &tmpDataJoinItem); err != nil {
-		panic(err)
-	}
-	testDataJoinItem["pagila_0"] = tmpDataJoinItem
-
-	// with operator
-	x = []byte(`{
-    "entity": {
-      "left": {
-        "type": "Field",
-        "is_arg": false,
-        "arg_index": null,
-        "field": {
-          "table": "person",
-          "column": "name"
-        },
-        "value": "",
-        "function": "",
-        "args": []
-      },
-      "right": {
-        "type": "Field",
-        "is_arg": false,
-        "arg_index": null,
-        "field": {
-          "table": "employee",
-          "column": "name"
-        },
-        "value": "",
-        "function": "",
-        "args": []
-      },
-      "equality": "="
-    },
-    "operator": "and"
-  }`)
-	if err := json.Unmarshal(x, &tmpDataJoinItem); err != nil {
-		panic(err)
-	}
-	testDataJoinItem["pagila_1"] = tmpDataJoinItem
-}
-
 func TestJoinItemGenerateSQL0(t *testing.T) {
-	x := []byte(`{
-    "entity": {
-      "left": {
-        "type": "Field",
-        "is_arg": false,
-        "arg_index": null,
-        "field": {
-          "table": "person",
-          "column": "name"
-        },
-        "value": "",
-        "function": "",
-        "args": []
-      },
-      "right": {
-        "type": "Field",
-        "is_arg": false,
-        "arg_index": null,
-        "field": {
-          "table": "employee",
-          "column": "name"
-        },
-        "value": "",
-        "function": "",
-        "args": []
-      },
-      "equality": "="
-    },
-    "operator": ""
-  }`)
+	x := []byte(`{"entity":{"type":"Field","is_arg":false,"field":{"table":"person","column":"name"},"equality":{"operator":"=","arg":{"type":"Field","is_arg":false,"field":{"table":"employee","column":"name"}}}},"operator":""}`)
 	var y JoinItem
 	if err := json.Unmarshal(x, &y); err != nil {
 		t.Error(err)
@@ -133,11 +26,15 @@ func TestJoinItemGenerateSQL0(t *testing.T) {
 }
 
 func TestJoinItemGenerateSQL1(t *testing.T) {
-	y := testDataJoinItem["pagila_1"]
+	x := []byte(`{"entity":{"type":"Field","field":{"table":"person","column":"name"},"equality":{"operator":"=","arg":{"type":"Field","field":{"table":"employee","column":"name"}}}},"operator":"and"}`)
+	var y JoinItem
+	if err := json.Unmarshal(x, &y); err != nil {
+		t.Error(err)
+	}
+
 	var got, expected string
 	var err error
 
-	// test full
 	if got, err = y.GenerateSQL(); err != nil {
 		t.Error(err)
 	}

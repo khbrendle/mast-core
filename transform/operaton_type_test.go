@@ -5,83 +5,12 @@ import (
 	"testing"
 )
 
-var testDataOperationType = make(map[string]OperationType)
-var tmpDataOperationType OperationType
-
-func init() {
-	var x []byte
-	// normal field join
-	x = []byte(`{
-    "method": "join",
-    "modifier": "left",
-    "join_on": [{
-      "entity": {
-        "left": {
-          "type": "Field",
-          "is_arg": false,
-          "arg_index": null,
-          "field": {
-            "table": "person",
-            "column": "name"
-          },
-          "value": "",
-          "function": "",
-          "args": []
-        },
-        "right": {
-          "type": "Field",
-          "is_arg": false,
-          "arg_index": null,
-          "field": {
-            "table": "employee",
-            "column": "name"
-          },
-          "value": "",
-          "function": "",
-          "args": []
-        },
-        "equality": "="
-      },
-      "operator": ""
-    },{
-      "entity": {
-        "left": {
-          "type": "Field",
-          "is_arg": false,
-          "arg_index": null,
-          "field": {
-            "table": "person",
-            "column": "name"
-          },
-          "value": "",
-          "function": "",
-          "args": []
-        },
-        "right": {
-          "type": "Field",
-          "is_arg": false,
-          "arg_index": null,
-          "field": {
-            "table": "employee",
-            "column": "name"
-          },
-          "value": "",
-          "function": "",
-          "args": []
-        },
-        "equality": "="
-      },
-      "operator": "and"
-    }]
-  }`)
-	if err := json.Unmarshal(x, &tmpDataOperationType); err != nil {
-		panic(err)
-	}
-	testDataOperationType["pagila_0"] = tmpDataOperationType
-}
-
 func TestOperatonTypeGenerateSQLJoin0(t *testing.T) {
-	y := testDataOperationType["pagila_0"]
+	x := []byte(`{"method":"join","modifier":"left","join_on":[{"entity":{"type":"Field","is_arg":false,"field":{"table":"person","column":"name"},"equality":{"operator":"=","arg":{"type":"Field","is_arg":false,"field":{"table":"employee","column":"name"}}}}},{"entity":{"type":"Field","is_arg":false,"field":{"table":"person","column":"name"},"equality":{"operator":"=","arg":{"type":"Field","is_arg":false,"field":{"table":"employee","column":"name"}}}},"operator":"and"}]}`)
+	var y OperationType
+	if err := json.Unmarshal(x, &y); err != nil {
+		t.Error(err)
+	}
 	var got, expected string
 	var err error
 

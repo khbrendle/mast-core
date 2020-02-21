@@ -124,22 +124,21 @@ func (ds *DataSource) PropograteAlias() {
 		ta = ds.AliasMap[e.GetFieldTable()]
 		ds.Select[i].SetFieldTableAlias(ta)
 	}
-	// propogate to joins
+	// TODO: propogate to joins
 	for i, e := range ds.Operations {
 		switch e.Type.Method {
 		case "join":
+
+			// TODO: finish this
 			for i2, e2 := range ds.Operations[i].Type.JoinOn {
-				// handle left side of join
-				switch e2.Entity.Left.Type {
+				switch e2.Entity.Type {
 				case "Field":
-					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.Left.GetFieldTable()]
-					ds.Operations[i].Type.JoinOn[i2].Entity.Left.SetFieldTableAlias(ta)
-				}
-				// handle right side of join
-				switch e2.Entity.Right.Type {
-				case "Field":
-					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.Right.GetFieldTable()]
-					ds.Operations[i].Type.JoinOn[i2].Entity.Right.SetFieldTableAlias(ta)
+					// left side of equality`
+					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.GetFieldTable()]
+					ds.Operations[i].Type.JoinOn[i2].Entity.SetFieldTableAlias(ta)
+					// right side of equality`
+					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.Equality.Arg.GetFieldTable()]
+					ds.Operations[i].Type.JoinOn[i2].Entity.Equality.Arg.SetFieldTableAlias(ta)
 				}
 			}
 		}

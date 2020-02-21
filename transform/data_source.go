@@ -2,16 +2,22 @@ package mast
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 	"text/template"
 )
 
 // DataSource contains the operations to create source/subquery
 type DataSource struct {
+	// query, subquery, or table
+	Type       string                 `json:"type"`
 	Select     []FieldTransform       `json:"select"`
+	From       *DataSource            `json:"from"`
 	Location   DataLocation           `json:"location"`
 	Filter     string                 `json:"filter"`
 	Operations []*DataSourceOperation `json:"operations"`
-	Alias      string                 `json:"-"`
+	Level      int                    `json:"level"`
+	AliasMap   map[string]string      `json:"alias_map"`
 }
 
 // TemplateBytes will run an input template against a DataSource object
@@ -41,51 +47,161 @@ func (ds DataSource) TemplateString(input string) (string, error) {
 	return string(b), nil
 }
 
-func (ds *DataSource) CreateAliases() {
-	ds.Location.CreateAlias()
-	// fmt.Printf("ds table %s, alias %s\n", ds.Location.Table, ds.Location.Alias)
-	for i := range ds.Operations {
-		ds.Operations[i].Source.CreateAliases()
-	}
+// func (ds *DataSource) CreateAliases() {
+// 	ds.Location.CreateAlias()
+// 	// fmt.Printf("ds table %s, alias %s\n", ds.Location.Table, ds.Location.Alias)
+// 	for i := range ds.Operations {
+// 		ds.Operations[i].Source.CreateAliases()
+// 	}
+// }
+
+// func (ds *DataSource) PropogateAlias() {
+// 	var aliasMap = make(map[string]string)
+// 	// get alias from anchor table
+// 	aliasMap[ds.Location.Table] = ds.Location.Alias
+// 	// create and get alias for each table in operations
+// 	for i, e := range ds.Operations {
+// 		// fmt.Printf("operation table: %s\n", e.Source.Location.Table)
+// 		// ds.Operations[i].CreateAlias()
+// 		aliasMap[e.Source.Location.Table] = ds.Operations[i].Source.Location.Alias
+// 		// fmt.Printf("\talias: %s\n", ds.Operations[i].Source.Location.Alias)
+// 	}
+//
+// 	// apply aliases to select statements
+// 	for i, e := range ds.Select {
+// 		ds.Select[i].Field.TableAlias = aliasMap[e.Field.Table]
+// 	}
+// 	// propograte to operations
+// 	for i := range ds.Operations {
+// 		ds.Operations[i].Source.PropogateAlias()
+// 	}
+//
+// 	// appli aliases to join statements
+// 	for i1, e1 := range ds.Operations {
+// 		for i2, e2 := range e1.Type.JoinOn {
+// 			// left side join
+// 			ds.Operations[i1].Type.JoinOn[i2].Entity.Left.Field.TableAlias = aliasMap[e2.Entity.Left.Field.Table]
+// 			// right side join
+// 			ds.Operations[i1].Type.JoinOn[i2].Entity.Right.Field.TableAlias = aliasMap[e2.Entity.Right.Field.Table]
+// 		}
+// 	}
+// }
+
+func (ds *DataSource) SetAlias() string {
+	return ds.Location.CreateAlias()
 }
 
-func (ds *DataSource) PropogateAlias() {
-	var aliasMap = make(map[string]string)
-	// get alias from anchor table
-	aliasMap[ds.Location.Table] = ds.Location.Alias
-	// create and get alias for each table in operations
+func (ds DataSource) GetTableName() string {
+	return ds.Location.Table
+}
+
+func (ds *DataSource) AddChildAlias() {
+	// initialize map
+	if ds.AliasMap == nil {
+		ds.AliasMap = make(map[string]string)
+	}
+	// set alias of base table
+	switch ds.Type {
+	case "query":
+		ds.AliasMap[ds.From.GetTableName()] = ds.From.SetAlias()
+	}
+	// set alias for operations
 	for i, e := range ds.Operations {
-		// fmt.Printf("operation table: %s\n", e.Source.Location.Table)
-		// ds.Operations[i].CreateAlias()
-		aliasMap[e.Source.Location.Table] = ds.Operations[i].Source.Location.Alias
-		// fmt.Printf("\talias: %s\n", ds.Operations[i].Source.Location.Alias)
-	}
-
-	// apply aliases to select statements
-	for i, e := range ds.Select {
-		ds.Select[i].Field.TableAlias = aliasMap[e.Field.Table]
-	}
-	// propograte to operations
-	for i := range ds.Operations {
-		ds.Operations[i].Source.PropogateAlias()
-	}
-
-	// appli aliases to join statements
-	for i1, e1 := range ds.Operations {
-		for i2, e2 := range e1.Type.JoinOn {
-			// left side join
-			ds.Operations[i1].Type.JoinOn[i2].Entity.Left.Field.TableAlias = aliasMap[e2.Entity.Left.Field.Table]
-			// right side join
-			ds.Operations[i1].Type.JoinOn[i2].Entity.Right.Field.TableAlias = aliasMap[e2.Entity.Right.Field.Table]
+		switch e.Source.Type {
+		case "table":
+			ds.AliasMap[e.GetTableName()] = ds.Operations[i].SetLocationAlias()
 		}
 	}
 }
 
+// maybe propogate alias by FieldTransform or DataSource
+// this might make recursion easier
+func (ds *DataSource) PropograteAlias() {
+	// currently for type query
+	var ta string
+	// propogate to select statements
+	for i, e := range ds.Select {
+		ta = ds.AliasMap[e.GetFieldTable()]
+		ds.Select[i].SetFieldTableAlias(ta)
+	}
+	// propogate to joins
+	for i, e := range ds.Operations {
+		switch e.Type.Method {
+		case "join":
+			for i2, e2 := range ds.Operations[i].Type.JoinOn {
+				// handle left side of join
+				switch e2.Entity.Left.Type {
+				case "Field":
+					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.Left.GetFieldTable()]
+					ds.Operations[i].Type.JoinOn[i2].Entity.Left.SetFieldTableAlias(ta)
+				}
+				// handle right side of join
+				switch e2.Entity.Right.Type {
+				case "Field":
+					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.Right.GetFieldTable()]
+					ds.Operations[i].Type.JoinOn[i2].Entity.Right.SetFieldTableAlias(ta)
+				}
+			}
+		}
+	}
+}
+
+func (ds *DataSource) SetLevel(l int) {
+	ds.Level = l
+}
+
+func (ds *DataSource) AddChildLevel() {
+	// initial level state for highest level object would be 0 which is set by default on unmarshal of json
+	// add level to single child
+	switch ds.Type {
+	case "query":
+		switch ds.From.Type {
+		case "subquery":
+			ds.From.SetLevel(ds.Level + 1)
+		}
+	case "subquery":
+		switch ds.From.Type {
+		case "table":
+			ds.From.SetLevel(ds.Level)
+		}
+	}
+
+	// add levels to operations
+	for i, e := range ds.Operations {
+		switch e.Type.Method {
+		case "union":
+			ds.Operations[i].Source.SetLevel(ds.Level)
+		default:
+			ds.Operations[i].Source.SetLevel(ds.Level + 1)
+		}
+		ds.Operations[i].SetLevel(ds.Level)
+	}
+}
+
+var templateMap = map[string]string{
+	"table": `{{ .Location.GenerateSQL }}{{ range .Operations }}{{ .GenerateSQL }}{{end}}`,
+	"query": `{{ levelSpaces .Level }}select {{ range $i, $e := .Select }}{{if gt $i 0}}, {{end}}{{ $e.GenerateSQL }}{{end}}
+{{ levelSpaces .Level }}from {{ .From.GenerateSQL }}{{ range .Operations }}{{ .GenerateSQL }}{{end}}`,
+}
+
 func (ds DataSource) GenerateSQL() (string, error) {
-	// ds.Location.CreateAlias()
-	// ds.PropogateAlias()
-	tmpl := `select {{ .GenerateSQLSelect }}
-from {{ .GenerateSQLFrom }}{{ range .Operations }}{{ .GenerateSQL }}{{end}}`
+	ds.AddChildAlias()
+	ds.PropograteAlias()
+	ds.AddChildLevel()
+	var tmpl string
+
+	switch ds.Type {
+	case "table":
+		fmt.Println("generating table")
+		tmpl = templateMap["table"]
+	case "query":
+		fmt.Println("generating query")
+		tmpl = templateMap["query"]
+	case "subquery":
+		fmt.Println("generating subquery")
+		tmpl = fmt.Sprintf("(\n%s\n%s)", templateMap["query"], strings.Repeat("  ", ds.Level-1))
+	}
+
 	return ds.TemplateString(tmpl)
 }
 

@@ -10,6 +10,7 @@ import (
 type DataSourceOperation struct {
 	Type   OperationType `json:"type"`
 	Source DataSource    `json:"source"`
+	Level  int           `json:"level"`
 }
 
 // TemplateBytes will run an input template against a DataSourceOperation object
@@ -43,6 +44,18 @@ func (s DataSourceOperation) TemplateString(tmpl string) (string, error) {
 // 	s.Source.Location.CreateAlias()
 // }
 
+func (ds *DataSourceOperation) SetLevel(l int) {
+	ds.Level = l
+}
+
+func (ds *DataSourceOperation) GetTableName() string {
+	return ds.Source.Location.Table
+}
+
+func (ds *DataSourceOperation) SetLocationAlias() string {
+	return ds.Source.SetAlias()
+}
+
 func (s *DataSourceOperation) GenerateSQL() (string, error) {
 	// s.CreateAlias()
 	// s.Source.PropogateAlias()
@@ -58,15 +71,15 @@ func (s *DataSourceOperation) GenerateSQL() (string, error) {
 
 func (s *DataSourceOperation) GenerateSQLUnion() (string, error) {
 	tmpl := `
-union{{ .Type.Modifier }}
-{{ .Source.GenerateSQL }}`
+{{ levelSpaces .Level }}union{{ .Type.Modifier }}
+{{ levelSpaces .Level }}{{ .Source.GenerateSQL }}`
 
 	return s.TemplateString(tmpl)
 }
 
 func (s *DataSourceOperation) GenerateSQLJoin() (string, error) {
 	tmpl := `
-{{ .Type.GenerateSQLModifier }}join {{ .Source.GenerateSQLFrom }}
-	on {{ .Type.GenerateSQLJoin }}`
+{{ levelSpaces .Level }}{{ .Type.GenerateSQLModifier }}join {{ .Source.GenerateSQLFrom }}
+{{ levelSpaces .Level }}  on {{ .Type.GenerateSQLJoin }}`
 	return s.TemplateString(tmpl)
 }

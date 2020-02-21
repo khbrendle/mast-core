@@ -13,7 +13,7 @@ type DataLocation struct {
 	Database string `json:"database"`
 	Schema   string `json:"schema"`
 	Table    string `json:"table"`
-	Alias    string `json:"-"`
+	Alias    string `json:"alias"`
 }
 
 // TemplateBytes will run an input template against a DataLocation object
@@ -43,18 +43,21 @@ func (s DataLocation) TemplateString(input string) (string, error) {
 	return string(b), nil
 }
 
-func (d *DataLocation) CreateAlias() {
+func (d *DataLocation) CreateAlias() string {
 	// fmt.Printf("creating alias for %s\n", d.Table)
+	var a string
 	switch test {
 	case true:
-		d.Alias = fmt.Sprintf("a_%s", d.Table)
+		a = fmt.Sprintf("a_%s", d.Table)
 	case false:
-		d.Alias = fmt.Sprintf("t_%s", xid.New().String())
+		a = fmt.Sprintf("t_%s", xid.New().String())
 	}
+	d.Alias = a
+	return a
 }
 
-func (d *DataLocation) GenerateSQL() (string, error) {
-	d.CreateAlias()
-	tmpl := `"{{ d.Schema }}"."{{ .Table }}" as "{{ .Alias }}"`
+func (d DataLocation) GenerateSQL() (string, error) {
+	// d.CreateAlias()
+	tmpl := `"{{ .Schema }}"."{{ .Table }}" as "{{ .Alias }}"`
 	return d.TemplateString(tmpl)
 }

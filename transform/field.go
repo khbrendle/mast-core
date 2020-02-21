@@ -9,7 +9,7 @@ type Field struct {
 	Database   string `json:"database"`
 	Table      string `json:"table"`
 	Column     string `json:"column"`
-	TableAlias string `json:"-"`
+	TableAlias string `json:"table_alias"`
 }
 
 // TemplateBytes executes an input template against Field object returning byte array
@@ -36,12 +36,30 @@ func (f Field) TemplateString(tmpl string) (string, error) {
 	return string(b), nil
 }
 
+func (f *Field) SetTableAlias(x string) {
+	f.TableAlias = x
+}
+
+func (f Field) GetTable() string {
+	return f.Table
+}
+
 func (f Field) GenerateSQL() (string, error) {
 	var tmpl string
 	if f.TableAlias == "" {
 		tmpl = `"{{ .Table }}"."{{ .Column }}"`
 	} else {
 		tmpl = `"{{ .TableAlias }}"."{{ .Column }}"`
+	}
+	return f.TemplateString(tmpl)
+}
+
+func (f Field) GeneratePySpark() (string, error) {
+	var tmpl string
+	if f.TableAlias == "" {
+		tmpl = `F.col("{{ .Table }}_{{ .Column }}")`
+	} else {
+		tmpl = `F.col("{{ .TableAlias }}_{{ .Column }}")`
 	}
 	return f.TemplateString(tmpl)
 }

@@ -10,8 +10,10 @@ import (
 // a static value, and describe an operation of multiple
 // join fields are necessary
 type JoinItem struct {
+	// single join group item representing equality of 2 fields or function call
 	Entity JoinGroup `json:"entity"`
-	// Logical operator
+	// Entity FieldTransform `json:"entity"`
+	// Logical operator; i.e. and, or, &, |
 	Operator string `json:"operator"`
 }
 

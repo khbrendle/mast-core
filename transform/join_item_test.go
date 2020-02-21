@@ -84,7 +84,41 @@ func init() {
 }
 
 func TestJoinItemGenerateSQL0(t *testing.T) {
-	y := testDataJoinItem["pagila_0"]
+	x := []byte(`{
+    "entity": {
+      "left": {
+        "type": "Field",
+        "is_arg": false,
+        "arg_index": null,
+        "field": {
+          "table": "person",
+          "column": "name"
+        },
+        "value": "",
+        "function": "",
+        "args": []
+      },
+      "right": {
+        "type": "Field",
+        "is_arg": false,
+        "arg_index": null,
+        "field": {
+          "table": "employee",
+          "column": "name"
+        },
+        "value": "",
+        "function": "",
+        "args": []
+      },
+      "equality": "="
+    },
+    "operator": ""
+  }`)
+	var y JoinItem
+	if err := json.Unmarshal(x, &y); err != nil {
+		t.Error(err)
+	}
+
 	var got, expected string
 	var err error
 

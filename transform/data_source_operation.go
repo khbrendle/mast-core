@@ -8,9 +8,9 @@ import (
 
 // DataSourceOperation instructs how to join or union a second source
 type DataSourceOperation struct {
-	Type   OperationType `json:"type"`
-	Source DataSource    `json:"source"`
-	Level  int           `json:"level"`
+	Type   OperationType `json:"type,omitempty"`
+	Source DataSource    `json:"source,omitempty"`
+	Level  int           `json:"level,omitempty"`
 }
 
 // TemplateBytes will run an input template against a DataSourceOperation object
@@ -81,5 +81,26 @@ func (s *DataSourceOperation) GenerateSQLJoin() (string, error) {
 	tmpl := `
 {{ levelSpaces .Level }}{{ .Type.GenerateSQLModifier }}join {{ .Source.GenerateSQLFrom }}
 {{ levelSpaces .Level }}  on {{ .Type.GenerateSQLJoin }}`
+	return s.TemplateString(tmpl)
+}
+
+func (s *DataSourceOperation) GeneratePySpark() (string, error) {
+	switch s.Type.Method {
+	case "union":
+		return s.GeneratePySparkUnion()
+	case "join":
+		return s.GeneratePySparkJoin()
+	default:
+		return "", fmt.Errorf("unexpected DataSourceOperation type '%s'", s.Type.Method)
+	}
+}
+
+func (s *DataSourceOperation) GeneratePySparkJoin() (string, error) {
+	tmpl := `.join({{ .Source.GeneratePySpark }}, on = {{ .Type.GeneratePySparkJoin }}{{ if ne .Type.Modifier "" }}, how = "{{ .Type.Modifier }}"{{ end }})`
+	return s.TemplateString(tmpl)
+}
+
+func (s *DataSourceOperation) GeneratePySparkUnion() (string, error) {
+	tmpl := `.union({{ .Source.GeneratePySpark }})`
 	return s.TemplateString(tmpl)
 }

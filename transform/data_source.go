@@ -9,15 +9,21 @@ import (
 
 // DataSource contains the operations to create source/subquery
 type DataSource struct {
-	// query, subquery, or table
-	Type       string                 `json:"type"`
-	Select     []FieldTransform       `json:"select"`
-	From       *DataSource            `json:"from"`
-	Location   DataLocation           `json:"location"`
-	Filter     string                 `json:"filter"`
-	Operations []*DataSourceOperation `json:"operations"`
-	Level      int                    `json:"level"`
-	AliasMap   map[string]string      `json:"alias_map"`
+	// 'query', 'subquery', or 'table'
+	Type string `json:"type"`
+	// list of columns to select from the source
+	// only used in query or subquery
+	Select []FieldTransform `json:"select"`
+	// from is used for subqueries and queries
+	From *DataSource `json:"from"`
+	//
+	Location   DataLocation           `json:"location,omitempty"`
+	Filter     string                 `json:"filter,omitempty"`
+	Operations []*DataSourceOperation `json:"operations,omitempty"`
+	Level      int                    `json:"level,omitempty"`
+	// alias should only exist on subquery
+	Alias    string            `json:"alias,omitempty"`
+	AliasMap map[string]string `json:"alias_map,omitempty"`
 }
 
 // TemplateBytes will run an input template against a DataSource object
@@ -103,47 +109,82 @@ func (ds *DataSource) AddChildAlias() {
 	// set alias of base table
 	switch ds.Type {
 	case "query":
-		ds.AliasMap[ds.From.GetTableName()] = ds.From.SetAlias()
+		switch ds.From.Type {
+		case "table":
+			ds.AliasMap[ds.From.GetTableName()] = ds.From.Location.Alias
+		case "subquery":
+			ds.AliasMap[ds.From.GetTableName()] = ds.From.Alias
+		}
+	case "subquery":
+		ds.AliasMap[ds.From.GetTableName()] = ds.Alias
 	}
+	fmt.Printf("alias_map: %+v\n", ds.AliasMap)
 	// set alias for operations
 	for i, e := range ds.Operations {
 		switch e.Source.Type {
 		case "table":
-			ds.AliasMap[e.GetTableName()] = ds.Operations[i].SetLocationAlias()
+			// ds.AliasMap[e.GetTableName()] = ds.Operations[i].SetLocationAlias()
+			ds.AliasMap[e.GetTableName()] = ds.Operations[i].Source.Location.Alias
 		}
 	}
 }
+
+// func (ds *DataSource) GetChildAlias() {
+// 	// initialize map
+// 	if ds.AliasMap == nil {
+// 		ds.AliasMap = make(map[string]string)
+// 	}
+// 	// set alias of base table
+// 	switch ds.Type {
+// 	case "query":
+// 		switch ds.From.Type {
+// 		case "table":
+// 			ds.AliasMap[ds.From.GetTableName()] = ds.From.Location.Alias
+// 		case "subquery":
+// 			ds.AliasMap[ds.From.GetTableName()] = ds.From.Alias
+// 		}
+// 	case "subquery":
+// 		ds.AliasMap[ds.From.GetTableName()] = ds.Alias
+// 	}
+// 	// set alias for operations
+// 	for i, e := range ds.Operations {
+// 		switch e.Source.Type {
+// 		case "table":
+// 			ds.AliasMap[e.GetTableName()] = ds.Operations[i].Source.Location.Alias
+// 		}
+// 	}
+// }
 
 // maybe propogate alias by FieldTransform or DataSource
 // this might make recursion easier
-func (ds *DataSource) PropograteAlias() {
-	// currently for type query
-	var ta string
-	// propogate to select statements
-	for i, e := range ds.Select {
-		ta = ds.AliasMap[e.GetFieldTable()]
-		ds.Select[i].SetFieldTableAlias(ta)
-	}
-	// TODO: propogate to joins
-	for i, e := range ds.Operations {
-		switch e.Type.Method {
-		case "join":
-
-			// TODO: finish this
-			for i2, e2 := range ds.Operations[i].Type.JoinOn {
-				switch e2.Entity.Type {
-				case "Field":
-					// left side of equality`
-					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.GetFieldTable()]
-					ds.Operations[i].Type.JoinOn[i2].Entity.SetFieldTableAlias(ta)
-					// right side of equality`
-					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.Equality.Arg.GetFieldTable()]
-					ds.Operations[i].Type.JoinOn[i2].Entity.Equality.Arg.SetFieldTableAlias(ta)
-				}
-			}
-		}
-	}
-}
+// func (ds *DataSource) PropograteAlias() {
+// 	// currently for type query
+// 	var ta string
+// 	// propogate to select statements
+// 	for i, e := range ds.Select {
+// 		// ta = ds.AliasMap[e.GetFieldTable()]
+// 		// ds.Select[i].SetFieldTableAlias(ta)
+//
+// 	}
+// 	// TODO: propogate to joins
+// 	for i, e := range ds.Operations {
+// 		switch e.Type.Method {
+// 		case "join":
+// 			// TODO: finish this
+// 			for i2, e2 := range ds.Operations[i].Type.JoinOn {
+// 				switch e2.Entity.Type {
+// 				case "Field":
+// 					// left side of equality`
+// 					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.GetFieldTable()]
+// 					ds.Operations[i].Type.JoinOn[i2].Entity.SetFieldTableAlias(ta)
+// 					// right side of equality`
+// 					ta = ds.AliasMap[ds.Operations[i].Type.JoinOn[i2].Entity.Equality.Arg.GetFieldTable()]
+// 					ds.Operations[i].Type.JoinOn[i2].Entity.Equality.Arg.SetFieldTableAlias(ta)
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 func (ds *DataSource) SetLevel(l int) {
 	ds.Level = l
@@ -177,28 +218,29 @@ func (ds *DataSource) AddChildLevel() {
 	}
 }
 
-var templateMap = map[string]string{
+var sqlTemplateMap = map[string]string{
 	"table": `{{ .Location.GenerateSQL }}{{ range .Operations }}{{ .GenerateSQL }}{{end}}`,
 	"query": `{{ levelSpaces .Level }}select {{ range $i, $e := .Select }}{{if gt $i 0}}, {{end}}{{ $e.GenerateSQL }}{{end}}
 {{ levelSpaces .Level }}from {{ .From.GenerateSQL }}{{ range .Operations }}{{ .GenerateSQL }}{{end}}`,
 }
 
 func (ds DataSource) GenerateSQL() (string, error) {
-	ds.AddChildAlias()
-	ds.PropograteAlias()
+	// ds.GetChildAlias()
+	// fmt.Printf("alias_map: %+v\n", ds.AliasMap)
+	// ds.PropograteAlias()
 	ds.AddChildLevel()
 	var tmpl string
 
 	switch ds.Type {
 	case "table":
 		fmt.Println("generating table")
-		tmpl = templateMap["table"]
+		tmpl = sqlTemplateMap["table"]
 	case "query":
 		fmt.Println("generating query")
-		tmpl = templateMap["query"]
+		tmpl = sqlTemplateMap["query"]
 	case "subquery":
 		fmt.Println("generating subquery")
-		tmpl = fmt.Sprintf("(\n%s\n%s)", templateMap["query"], strings.Repeat("  ", ds.Level-1))
+		tmpl = fmt.Sprintf("(\n%s\n%s) as \"%s\"", sqlTemplateMap["query"], strings.Repeat("  ", ds.Level-1), ds.Alias)
 	}
 
 	return ds.TemplateString(tmpl)
@@ -211,5 +253,59 @@ func (ds DataSource) GenerateSQLSelect() (string, error) {
 
 func (ds DataSource) GenerateSQLFrom() (string, error) {
 	tmpl := `"{{ .Location.Schema }}"."{{ .Location.Table }}" as "{{ .Location.Alias }}"`
+	return ds.TemplateString(tmpl)
+}
+
+var pysparkTemplateMap = map[string]string{
+	"table": `{{ .Location.GeneratePySpark }}`,
+	"query": `{{ .From.GeneratePySpark }}{{ range .Operations }}{{ .GeneratePySpark }}{{ end }}{{ .GeneratePySparkSelect }}`,
+	// "query": `{{ .From.GeneratePySpark }}{{ .GeneratePySparkSelect }}{{ range .Operations }}{{ .GeneratePySpark }}{{ end }}`,
+}
+
+func (ds DataSource) GeneratePySpark() (string, error) {
+	var tmpl string
+	// when joining can join then select, for union need to select from first table then union
+	// if ds.Operations != nil {
+	// 	var s strings.Builder
+	// 	fmt.Println("operations exist")
+	// 	fmt.Println()
+	// 	// s.WriteString(`{{ .From.GeneratePySpark }}`) // this isn't working, maybe works with union but not join
+	// 	// s.WriteString(`{{ .Location.GeneratePySpark }}`)
+	// 	for _, e := range ds.Operations {
+	// 		fmt.Printf("%s operation: %+v\n", e.Type.Method, e)
+	// 		if e.Type.Method == "union" {
+	// 			s.WriteString(`{{ .From.GeneratePySpark }}.select({{ .GeneratePySparkSelect }}){{ range .Operations }}{{ .GeneratePySpark }}{{ end }}`)
+	// 		} else if e.Type.Method == "join" {
+	// 			s.WriteString(`{{ .Location.GeneratePySpark }}{{ range .Operations }}{{ .GeneratePySpark }}{{ end }}{{ .GeneratePySparkSelect }}`)
+	// 		}
+	// 	}
+	// 	fmt.Printf("executing template:\n\n%s\n", tmpl)
+	// 	return ds.TemplateString(s.String())
+	// }
+	// if ds.Operations != nil {
+	//
+	// }
+	// based on type, generate call
+	switch ds.Type {
+	case "table":
+		fmt.Println("generating table")
+		tmpl = pysparkTemplateMap["table"]
+	case "query":
+		fmt.Println("generating query")
+		tmpl = pysparkTemplateMap["query"]
+	case "subquery":
+		fmt.Println("generating subquery")
+		tmpl = pysparkTemplateMap["query"]
+	}
+
+	fmt.Printf("executing template:\n\n%v\n\n", tmpl)
+	return ds.TemplateString(tmpl)
+}
+
+func (ds DataSource) GeneratePySparkSelect() (string, error) {
+	var tmpl string
+	if len(ds.Select) > 0 {
+		tmpl = `.select({{ $len := sub1 (len .Select) }}{{range $i, $e := .Select}}{{ $e.GeneratePySpark }}{{if lt $i $len }}, {{end}}{{end}})`
+	}
 	return ds.TemplateString(tmpl)
 }

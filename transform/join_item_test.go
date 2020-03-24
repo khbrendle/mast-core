@@ -43,3 +43,23 @@ func TestJoinItemGenerateSQL1(t *testing.T) {
 		t.Errorf("\ngot     :\n%s\nexpected:\n%s", got, expected)
 	}
 }
+
+func TestJoinItemGeneratePySpark0(t *testing.T) {
+	x := []byte(`{"entity":{"type":"Field","is_arg":false,"field":{"table":"person","column":"name"},"equality":{"operator":"==","arg":{"type":"Field","is_arg":false,"field":{"table":"employee","column":"name"}}}},"operator":""}`)
+	var y JoinItem
+	if err := json.Unmarshal(x, &y); err != nil {
+		t.Error(err)
+	}
+
+	var got, expected string
+	var err error
+
+	// test full
+	if got, err = y.GeneratePySpark(); err != nil {
+		t.Error(err)
+	}
+	expected = `F.col("person_name") == F.col("employee_name")`
+	if got != expected {
+		t.Errorf("\ngot     :\n%s\nexpected:\n%s", got, expected)
+	}
+}

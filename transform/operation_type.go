@@ -55,3 +55,8 @@ func (s OperationType) GenerateSQLModifier() (string, error) {
 	}
 	return s.TemplateString(tmpl)
 }
+
+func (s OperationType) GeneratePySparkJoin() (string, error) {
+	tmpl := `{{range $i, $e := .JoinOn }}{{if gt $i 0}} {{end}}{{ .GeneratePySpark }}{{end}}`
+	return s.TemplateString(tmpl)
+}

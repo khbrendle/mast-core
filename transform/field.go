@@ -6,10 +6,12 @@ import (
 )
 
 type Field struct {
-	Database   string `json:"database"`
-	Table      string `json:"table"`
-	Column     string `json:"column"`
-	TableAlias string `json:"table_alias"`
+	Database   string `json:"database,omitempty"`
+	Table      string `json:"table,omitempty"`
+	TableID    string `json:"table_id,omitempty"`
+	Column     string `json:"column,omitempty"`
+	ColumnID   string `json:"column_id,omitempty"`
+	TableAlias string `json:"table_alias,omitempty"`
 }
 
 // TemplateBytes executes an input template against Field object returning byte array

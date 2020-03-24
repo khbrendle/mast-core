@@ -17,7 +17,8 @@ func (api *API) GetHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// PostUpload ...
+// PostUpload will accept a csv file and write the information in to the database
+// expecting : database,schema,table,field
 func (api *API) PostUpload(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20) // limit your max input length!
 	fmt.Printf("customField: %s\n", r.PostForm["CustomField"])
@@ -138,11 +139,20 @@ func (api *API) PostUpload(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) GetDatabase(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	databaseID := r.FormValue("database_id")
+	keys := []string{"database_id"}
 
 	var o []Database
 	var err error
-	if err = a.DB.Table(`entities.database`).Where("database_id = ?", databaseID).Find(&o).Error; err != nil {
+	var v string
+	tx := a.DB.Table(`entities.database`)
+	for _, k := range keys {
+		v = r.FormValue(k)
+		if v != "" {
+			tx = tx.Where(fmt.Sprintf(`%s = ?`, k), v)
+		}
+	}
+	tx = tx.Order("database_name")
+	if err = tx.Find(&o).Error; err != nil {
 		HandleAPIError(w, http.StatusInternalServerError, "error getting data", err)
 		return
 	}
@@ -173,7 +183,7 @@ func (a *API) GetTable(w http.ResponseWriter, r *http.Request) {
 			tx = tx.Where(fmt.Sprintf(`%s = ?`, k), v)
 		}
 	}
-	tx = tx.Where("deleted_at is null")
+	tx = tx.Where("deleted_at is null").Order("table_name")
 	if err = tx.Scan(&o).Error; err != nil {
 		HandleAPIError(w, http.StatusInternalServerError, "error getting data", err)
 		return
@@ -205,7 +215,7 @@ func (a *API) GetField(w http.ResponseWriter, r *http.Request) {
 			tx = tx.Where(fmt.Sprintf(`%s = ?`, k), v)
 		}
 	}
-	tx = tx.Where("deleted_at is null")
+	tx = tx.Where("deleted_at is null").Order("field_name")
 	if err = tx.Scan(&o).Error; err != nil {
 		HandleAPIError(w, http.StatusInternalServerError, "error getting data", err)
 		return

@@ -9,18 +9,28 @@ import (
 
 type FieldTransform struct {
 	// 'Field', 'Function', or 'Value'
-	Type         string            `json:"type"`
-	IsArg        bool              `json:"is_arg"`
-	ArgIndex     int               `json:"arg_index"`
-	Field        Field             `json:"field"`
-	Value        json.RawMessage   `json:"value"`
-	Function     string            `json:"function"`
-	Args         []*FieldTransform `json:"args"`
-	ChainMethods []*FieldTransform `json:"chain_methods"`
+	Type string `json:"type,omitempty"`
+	// Negate true will add ~ to front of field/function/value call
+	Negate bool `json:"negate,omitempty"`
+	// used in front-end
+	IsArg bool `json:"is_arg,omitempty"`
+	// used in front-end
+	ArgIndex int `json:"arg_index,omitempty"`
+	// describes table field
+	Field Field `json:"field,omitempty"`
+	// represents various types of values: int, flot, string
+	Value json.RawMessage `json:"value,omitempty"`
+	// string of function name
+	Function string `json:"function,omitempty"`
+	// array of function arguments
+	Args []*FieldTransform `json:"args,omitempty"`
+	// array of methods to chain, need the leading period
+	ChainMethods []*FieldTransform `json:"chain_methods,omitempty"`
 	// for doing equality comprisons, if there is an equality then the
 	// result should be compared to Args[0]
-	Equality Equality `json:"equality"`
-	Alias    string   `json:"alias"`
+	Equality Equality `json:"equality,omitempty"`
+	// if 'Field' or 'Function', can be aliased to new name
+	Alias string `json:"alias,omitempty"`
 }
 
 // TemplateBytes executes an input template against FieldTransform object returning byte array

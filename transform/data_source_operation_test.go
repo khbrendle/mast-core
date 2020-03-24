@@ -50,3 +50,23 @@ left join "public"."actor" as ""
 		t.Errorf("\ngot     :\n%s\nexpected:\n%s", got, expected)
 	}
 }
+
+func TestDataSourceOperationGeneratePySpark1(t *testing.T) {
+	var y DataSourceOperation
+	x := []byte(`{"type":{"method":"join","modifier":"left","join_on":[{"entity":{"type":"Field","is_arg":false,"field":{"table":"person","column":"name"},"equality":{"operator":"==","arg":{"type":"Field","is_arg":false,"field":{"table":"employee","column":"name"}}}}},{"entity":{"type":"Field","is_arg":false,"arg_index":null,"field":{"table":"person","column":"name"},"equality":{"operator":"==","arg":{"type":"Field","is_arg":false,"field":{"table":"employee","column":"name"}}}},"operator":"&"}]},"source":{"type":"table","location":{"database":"pagila","schema":"public","table":"actor"}}}`)
+	var err error
+	if err = json.Unmarshal(x, &y); err != nil {
+		t.Error(err)
+	}
+	// fmt.Printf("%+v\n", y)
+	var got, expected string
+
+	// test full
+	if got, err = y.GeneratePySpark(); err != nil {
+		t.Error(err)
+	}
+	expected = `.join(df_pagila_public_actor,on = F.col("person_name") == F.col("employee_name") & F.col("person_name") == F.col("employee_name"), how = "left")`
+	if got != expected {
+		t.Errorf("\ngot     :\n%s\nexpected:\n%s", got, expected)
+	}
+}

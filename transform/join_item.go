@@ -11,9 +11,9 @@ import (
 // join fields are necessary
 type JoinItem struct {
 	// single join group item representing equality of 2 fields or function call
-	Entity FieldTransform `json:"entity"`
+	Entity FieldTransform `json:"entity,omitempty"`
 	// Logical operator; i.e. and, or, &, |
-	Operator string `json:"operator"`
+	Operator string `json:"operator,omitempty"`
 }
 
 // TemplateBytes will run an input template against a JoinItem object
@@ -45,5 +45,10 @@ func (s JoinItem) TemplateString(tmpl string) (string, error) {
 
 func (j JoinItem) GenerateSQL() (string, error) {
 	tmpl := `{{if ne .Operator ""}}{{ .Operator }} {{end}}{{ .Entity.GenerateSQL }}`
+	return j.TemplateString(tmpl)
+}
+
+func (j JoinItem) GeneratePySpark() (string, error) {
+	tmpl := `{{if ne .Operator ""}}{{ .Operator }} {{end}}{{ .Entity.GeneratePySpark }}`
 	return j.TemplateString(tmpl)
 }

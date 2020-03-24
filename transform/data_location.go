@@ -10,10 +10,10 @@ import (
 
 // DataLocation is the physical location of the data
 type DataLocation struct {
-	Database string `json:"database"`
-	Schema   string `json:"schema"`
-	Table    string `json:"table"`
-	Alias    string `json:"alias"`
+	Database string `json:"database,omitempty"`
+	Schema   string `json:"schema,omitempty"`
+	Table    string `json:"table,omitempty"`
+	Alias    string `json:"alias,omitempty"`
 }
 
 // TemplateBytes will run an input template against a DataLocation object
@@ -59,5 +59,11 @@ func (d *DataLocation) CreateAlias() string {
 func (d DataLocation) GenerateSQL() (string, error) {
 	// d.CreateAlias()
 	tmpl := `"{{ .Schema }}"."{{ .Table }}" as "{{ .Alias }}"`
+	return d.TemplateString(tmpl)
+}
+
+func (d DataLocation) GeneratePySpark() (string, error) {
+	// d.CreateAlias()
+	tmpl := `df_{{ .Database }}_{{ .Schema }}_{{ .Table }}`
 	return d.TemplateString(tmpl)
 }

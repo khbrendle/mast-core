@@ -56,6 +56,7 @@ func (api *API) PostUpload(w http.ResponseWriter, r *http.Request) {
 			HandleAPIError(w, http.StatusBadRequest, "error reading records", err)
 			return
 		}
+		// fmt.Printf(`'%s%s%s%s%s';`, r[0], r[1], r[2], r[3], r[4])
 		// if itr > 5 {
 		// 	break
 		// }
@@ -71,11 +72,11 @@ func (api *API) PostUpload(w http.ResponseWriter, r *http.Request) {
 			}
 			// fmt.Printf("db:%s;schema:%s;table:%s;field:%s;", r[0], r[1], r[2], r[3])
 			fields = append(fields, &Field{
-				DatabaseName: r[0],
-				SchemaName:   r[1],
-				TableName:    r[2],
-				FieldID:      xid.New().String(),
-				FieldName:    r[3],
+				FieldID:    xid.New().String(),
+				SchemaName: r[1],
+				TableName:  r[2],
+				FieldName:  r[3],
+				DataType:   r[4],
 			})
 		} else {
 			// read header
@@ -84,10 +85,13 @@ func (api *API) PostUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	var id string
 	// create DB records
+	var i int
 	for k, v := range dbMap {
+		fmt.Printf("db %d", i)
 		id = xid.New().String()
 		dbMap[k].SetDatabaseID(id)
 		dbs = append(dbs, *v)
+		i++
 	}
 	// create Table records
 	for _, v := range tableMap {
@@ -98,7 +102,8 @@ func (api *API) PostUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	// add DB & Table IDs to fields
 	for _, v := range fields {
-		v.SetDatabaseID(dbMap[v.DatabaseName].DatabaseID)
+		// v.SetDatabaseID(dbMap[v.DatabaseName].DatabaseID)
+		// fmt.Printf("%s.%s\n", v.SchemaName, v.TableName)
 		v.SetTableID(tableMap[fmt.Sprintf(`%s.%s`, v.SchemaName, v.TableName)].TableID)
 	}
 
@@ -285,4 +290,129 @@ func (a *API) PostFieldTransform(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (a *API) PostDatabase(w http.ResponseWriter, r *http.Request) {
+	var d Database
+	var err error
+
+	fmt.Printf("post database body: %v\n", r.Body)
+
+	if err = json.NewDecoder(r.Body).Decode(&d); err != nil {
+		HandleAPIError(w, http.StatusBadRequest, "error decoding request body", err)
+		return
+	}
+	fmt.Printf("post body decoded: %v\n", d)
+
+	if err = a.CreateDatabase([]Database{d}); err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error writing transform to database", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *API) PostTable(w http.ResponseWriter, r *http.Request) {
+	var t Table
+	var err error
+
+	fmt.Printf("post body: %v\n", r.Body)
+
+	if err = json.NewDecoder(r.Body).Decode(&t); err != nil {
+		HandleAPIError(w, http.StatusBadRequest, "error decoding request body", err)
+		return
+	}
+
+	if err = a.CreateTable([]Table{t}); err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error writing transform to database", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *API) PostField(w http.ResponseWriter, r *http.Request) {
+	var f Field
+	var err error
+
+	fmt.Printf("post body: %v\n", r.Body)
+
+	if err = json.NewDecoder(r.Body).Decode(&f); err != nil {
+		HandleAPIError(w, http.StatusBadRequest, "error decoding request body", err)
+		return
+	}
+
+	if err = a.CreateField([]*Field{&f}); err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error writing transform to database", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *API) GetRelation(w http.ResponseWriter, r *http.Request) {
+	var rels []Relation
+	var err error
+
+	if err = a.DB.Table(`entities.relation`).Select(`from_id "from", to_id "to", relation`).Scan(&rels).Error; err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error getting relations from database", err)
+	}
+
+	var b []byte
+	if b, err = json.Marshal(&rels); err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error creating response", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/json; charset=utf-8")
+	w.Write(b)
+}
+
+func (a *API) GetNode(w http.ResponseWriter, r *http.Request) {
+	var nodes []GraphNode
+	var err error
+
+	if err = a.DB.Table(`entities.all`).Scan(&nodes).Error; err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error getting relations from database", err)
+	}
+
+	var b []byte
+	if b, err = json.Marshal(&nodes); err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error creating response", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/json; charset=utf-8")
+	w.Write(b)
+}
+
+func (a *API) EntitySearch(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	keys := []string{"label"}
+
+	var o []GraphNode
+	var err error
+	var v string
+	tx := a.DB.Table(`entities.all`)
+	for _, k := range keys {
+		v = r.FormValue(k)
+		// fmt.Printf("K: %s; V: %s\n", k, v)
+		if (v != "") && (k == "label") {
+			tx = tx.Where(fmt.Sprintf(`label like '%%%s%%'`, v))
+		}
+	}
+	// tx = tx.Order("field_name")
+	if err = tx.Scan(&o).Error; err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error getting data", err)
+		return
+	}
+
+	var b []byte
+	if b, err = json.Marshal(&o); err != nil {
+		HandleAPIError(w, http.StatusInternalServerError, "error creating response", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/json; charset=utf-8")
+	w.Write(b)
 }

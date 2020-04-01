@@ -19,12 +19,12 @@ func (a *API) DBConnect() error {
 }
 
 func (a *API) CreateDatabase(dbs []Database) error {
-	fmt.Printf("Creating records for %+v\n", dbs)
+	fmt.Printf("Creating database records for %+v\n", dbs)
 	var err error
+	var d Database
 	for _, r := range dbs {
-		tx := a.DB.Begin()
-		if err = tx.Table(`entities.database`).Create(&r).Error; err != nil {
-			tx.Rollback()
+		println("writing db record")
+		if err = a.DB.Debug().Raw(`select "entities".put_database(?, ?)`, r.DatabaseID, r.DatabaseName).Scan(&d).Error; err != nil {
 			switch err.(type) {
 			case *pg.Error:
 				return err.(*pg.Error)
@@ -32,19 +32,17 @@ func (a *API) CreateDatabase(dbs []Database) error {
 				return err
 			}
 		}
-		fmt.Println("comitting")
-		tx.Commit()
 	}
 	return nil
 }
 
 func (a *API) CreateTable(tables []Table) error {
-	fmt.Printf("Creating records for %+v\n", tables)
+	fmt.Printf("Creating table records for %+v\n", tables)
 	var err error
+	var t Table
 	for _, r := range tables {
-		tx := a.DB.Begin()
-		if err = tx.Table(`entities.table`).Create(&r).Error; err != nil {
-			tx.Rollback()
+		println("writing table record")
+		if err = a.DB.Debug().Raw(`select "entities".put_table(?, ?, ?, ?)`, r.TableID, r.DatabaseID, r.TableName, r.SchemaName).Scan(&t).Error; err != nil {
 			switch err.(type) {
 			case *pg.Error:
 				return err.(*pg.Error)
@@ -52,19 +50,17 @@ func (a *API) CreateTable(tables []Table) error {
 				return err
 			}
 		}
-		fmt.Println("comitting")
-		tx.Commit()
 	}
 	return nil
 }
 
 func (a *API) CreateField(fields []*Field) error {
-	fmt.Printf("Creating records for %+v\n", fields)
+	// fmt.Printf("Creating field records for %+v\n", fields)
 	var err error
+	var f Field
 	for _, r := range fields {
-		tx := a.DB.Begin()
-		if err = tx.Table(`entities.field`).Create(&r).Error; err != nil {
-			tx.Rollback()
+		// println("writing field record")
+		if err = a.DB.Debug().Raw(`select "entities".put_field(?, ?, ?, ?)`, r.FieldID, r.TableID, r.FieldName, r.DataType).Scan(&f).Error; err != nil {
 			switch err.(type) {
 			case *pg.Error:
 				return err.(*pg.Error)
@@ -72,8 +68,6 @@ func (a *API) CreateField(fields []*Field) error {
 				return err
 			}
 		}
-		fmt.Println("comitting")
-		tx.Commit()
 	}
 	return nil
 }

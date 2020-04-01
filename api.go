@@ -39,6 +39,7 @@ func (api *API) Init() error {
 	if err = api.DBConnect(); err != nil {
 		return err
 	}
+	api.DB.LogMode(true)
 
 	return nil
 }

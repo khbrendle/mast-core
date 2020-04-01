@@ -3,15 +3,19 @@ package mast
 import (
 	"bytes"
 	"html/template"
+	"time"
 )
 
 type Field struct {
-	Database   string `json:"database,omitempty"`
-	Table      string `json:"table,omitempty"`
-	TableID    string `json:"table_id,omitempty"`
-	Column     string `json:"column,omitempty"`
-	ColumnID   string `json:"column_id,omitempty"`
-	TableAlias string `json:"table_alias,omitempty"`
+	FieldID string `json:"field_id,omitempty"`
+	// DatabaseID string    `json:"database_id,omitempty"`
+	TableID    string    `json:"table_id,omitempty"`
+	TableAlias string    `json:"-"`
+	FieldName  string    `json:"field_name,omitempty"`
+	DataType   string    `json:"data_type,omitempty"`
+	CreatedAt  time.Time `json:"created_at,omitempty"`
+	UpdatedAt  time.Time `json:"updated_at,omitempty"`
+	DeletedAt  time.Time `json:"deleted_at,omitempty"`
 }
 
 // TemplateBytes executes an input template against Field object returning byte array
@@ -43,7 +47,7 @@ func (f *Field) SetTableAlias(x string) {
 }
 
 func (f Field) GetTable() string {
-	return f.Table
+	return f.TableID
 }
 
 func (f Field) GenerateSQL() (string, error) {
